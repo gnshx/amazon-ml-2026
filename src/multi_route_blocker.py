@@ -199,34 +199,34 @@ class MultiRouteBlocker:
 
         # 1. Exact core
         if core in self.target_by_core_name:
-            route_cands["exact_core"].update(self.target_by_core_name[core][:50])
+            route_cands["exact_core"].update(self.target_by_core_name[core][:500])
 
         # 2. Sorted key
         if sorted_k in self.target_by_sorted_key:
-            route_cands["sorted_key"].update(self.target_by_sorted_key[sorted_k][:50])
+            route_cands["sorted_key"].update(self.target_by_sorted_key[sorted_k][:500])
 
         # 3. Prefix token
         if tokens and len(tokens[0]) >= 4:
             prefix = tokens[0][:5]
             if prefix in self.target_by_prefix_token:
-                route_cands["prefix_token"].update(self.target_by_prefix_token[prefix][:30])
+                route_cands["prefix_token"].update(self.target_by_prefix_token[prefix][:300])
 
         # 4. Address structural
         if postal and num:
             addr_key = (postal, num)
             if addr_key in self.target_by_postal_and_num:
-                route_cands["address_struct"].update(self.target_by_postal_and_num[addr_key][:40])
+                route_cands["address_struct"].update(self.target_by_postal_and_num[addr_key][:300])
 
         # 5. Phonetic
         if tokens and tokens[0].isalpha():
             s_code = compute_soundex(tokens[0])
             if s_code in self.target_by_phonetic:
-                route_cands["phonetic"].update(self.target_by_phonetic[s_code][:20])
+                route_cands["phonetic"].update(self.target_by_phonetic[s_code][:150])
 
         # 6. Rare tokens
         for tok in tokens:
             if tok in self.target_by_rare_token:
-                route_cands["rare_token"].update(self.target_by_rare_token[tok][:25])
+                route_cands["rare_token"].update(self.target_by_rare_token[tok][:200])
 
         return route_cands
 

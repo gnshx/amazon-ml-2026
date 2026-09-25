@@ -29,15 +29,16 @@ def run_cmd(cmd: str, desc: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Run complete ML challenge pipeline.")
-    parser.add_argument("--step", default="all", choices=["all", "baseline", "blocking", "train", "audit"],
-                        help="Pipeline step to execute.")
+    parser.add_argument("--step", default="gpu", choices=["all", "gpu", "baseline", "blocking", "train", "audit"],
+                        help="Pipeline step to execute (default: gpu).")
     parser.add_argument("--train-dir", default="dataset/train", help="Path to training dataset.")
     parser.add_argument("--test-dir", default="dataset/test", help="Path to test dataset.")
     parser.add_argument("--output-dir", default="output", help="Output directory for submissions.")
+    parser.add_argument("--n-train", type=int, default=35000, help="Number of training entities for GBDT.")
+    parser.add_argument("--n-val", type=int, default=15000, help="Number of validation entities for GBDT.")
     args = parser.parse_args()
 
-    venv_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "bin", "python")
-    python_bin = venv_py if os.path.exists(venv_py) else sys.executable
+    python_bin = sys.executable
 
     # Phase 0: Verify dataset
     train_s1 = os.path.join(args.train_dir, "train_source1.tsv")
@@ -53,20 +54,20 @@ def main():
         print("  - dataset/test/test_source1.tsv (and S2/S3 test files)")
         sys.exit(1)
 
-    # Phase 1: Audit & Split
-    if args.step in ["all", "audit"]:
+    # Fast Full GPU Pipeline (Phase 1 through Phase 5)
+    if args.step in ["gpu", "all"]:
+        run_cmd(
+            f"{python_bin} src/run_gpu_pipeline.py --train-dir {args.train_dir} --test-dir {args.test_dir} "
+            f"--output-dir {args.output_dir} --n-train {args.n_train} --n-val {args.n_val}",
+            "Full GPU Pipeline: Training on RTX 3060, Calibrated Sweep & Full Test Inference"
+        )
+    elif args.step == "audit":
         run_cmd(f"{python_bin} src/data_audit_and_split.py {args.train_dir}", "Phase 1: Data Audit & Grouped 5-Fold CV")
-
-    # Phase 2: Baseline
-    if args.step in ["all", "baseline"]:
+    elif args.step == "baseline":
         run_cmd(f"{python_bin} src/baseline_rule_matcher.py", "Phase 2: Baseline Rule Matcher & Hour-1 Submission")
-
-    # Phase 3: Multi-route blocking
-    if args.step in ["all", "blocking"]:
+    elif args.step == "blocking":
         run_cmd(f"{python_bin} src/multi_route_blocker.py", "Phase 3: Multi-Route Blocker (>= 98% Recall Target)")
-
-    # Phase 4: Training & Singleton Gate
-    if args.step in ["all", "train"]:
+    elif args.step == "train":
         run_cmd(f"{python_bin} src/train_gbdt_and_singleton_gate.py", "Phase 4: Train Calibrated GBDT & Singleton Gate")
 
     print("\n" + "=" * 75)
