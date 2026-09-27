@@ -1,24 +1,14 @@
-# Competition Datasets & Archives (Never push to GitHub - exceeds 100MB limit)
 dataset/
-student_resource/
-*.zip
-*.tar.gz
+output/
+scratch/
+catboost_info/
 *.tsv
 *.csv
-output/
-submission_staging/
-
-# Python & Virtualenv
-.venv/
+*.pkl
+*.bin
+*.tar.gz
+*.npy
+*.npz
+*.log
 __pycache__/
 *.pyc
-*.pyo
-.ipynb_checkpoints/
-
-# Internal Strategy & Plans (Private)
-*plan*.md
-plan*.md
-best_plan.md
-
-# System files
-.DS_Store
