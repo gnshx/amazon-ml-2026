@@ -19,6 +19,7 @@ import csv
 import gc
 import json
 import os
+import pickle
 import random
 import re
 import subprocess
@@ -40,6 +41,8 @@ from feature_extractor import (
     extract_distinctive_name_tokens,
     extract_postal_and_number,
     is_non_ascii_name,
+    prepare_record,
+    GENERIC_WORDS,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -72,9 +75,6 @@ def compute_s1_blocking_keys(name: str, address: str, country: str) -> dict:
     postal_num_key = f"{postal}_{num}" if (postal and num) else ""
     addr_num_keys = [f"{num}_{dt}" for dt in sorted(dist_tokens)[:3]] if (num and dist_tokens) else []
 
-    first_tok = core.split()[0] if core else ""
-    prefix_key = first_tok[:4] if len(first_tok) >= 4 else ""
-
     return {
         "norm": norm,
         "core": core,
@@ -88,7 +88,6 @@ def compute_s1_blocking_keys(name: str, address: str, country: str) -> dict:
         "aliases": alias_cores,
         "postal_num_key": postal_num_key,
         "addr_num_keys": addr_num_keys,
-        "prefix": prefix_key,
     }
 
 
@@ -105,7 +104,6 @@ def build_filtered_target_index(
     idx_brand = defaultdict(list)
     idx_postal_num = defaultdict(list)
     idx_addr_num = defaultdict(list)
-    idx_prefix = defaultdict(list)
     target_data = {}
 
     cores_set = needed_keys["cores"]
@@ -114,15 +112,13 @@ def build_filtered_target_index(
     brand_set = needed_keys["brand"]
     postal_num_set = needed_keys["postal_num"]
     addr_num_set = needed_keys["addr_num"]
-    prefix_set = needed_keys.get("prefixes", set())
 
-    cap_core = caps.get("core", 250)
-    cap_sorted = caps.get("sorted", 200)
-    cap_concat = caps.get("concat", 150)
-    cap_brand = caps.get("brand", 150)
-    cap_postal_num = caps.get("postal_num", 150)
-    cap_addr_num = caps.get("addr_num", 100)
-    cap_prefix = caps.get("prefix", 60)
+    cap_core = caps.get("core", 35)
+    cap_sorted = caps.get("sorted", 30)
+    cap_concat = caps.get("concat", 20)
+    cap_brand = caps.get("brand", 20)
+    cap_postal_num = caps.get("postal_num", 20)
+    cap_addr_num = caps.get("addr_num", 10)
 
     for fname in source_files:
         path = os.path.join(source_dir, fname)
@@ -167,15 +163,9 @@ def build_filtered_target_index(
 
                 t_brand = extract_distinctive_name_tokens(t_name)
                 for b in t_brand:
-                    if b in brand_set and len(idx_brand[b]) < cap_brand:
+                    if b in brand_set and b not in GENERIC_WORDS and len(idx_brand[b]) < cap_brand:
                         idx_brand[b].append(t_id)
                         hit = True
-
-                first_tok = t_core.split()[0] if t_core else ""
-                pfx = first_tok[:4] if len(first_tok) >= 4 else ""
-                if pfx and pfx in prefix_set and len(idx_prefix[pfx]) < cap_prefix:
-                    idx_prefix[pfx].append(t_id)
-                    hit = True
 
                 t_num = ""
                 if t_addr:
@@ -193,13 +183,7 @@ def build_filtered_target_index(
                                 hit = True
 
                 if hit:
-                    target_data[t_id] = {
-                        "name": t_name,
-                        "address": t_addr,
-                        "country": t_country,
-                        "core": t_core,
-                        "num": t_num,
-                    }
+                    target_data[t_id] = prepare_record(t_name, t_addr, t_country)
 
     indices = {
         "core": idx_core,
@@ -208,7 +192,6 @@ def build_filtered_target_index(
         "brand": idx_brand,
         "postal_num": idx_postal_num,
         "addr_num": idx_addr_num,
-        "prefix": idx_prefix,
     }
     return indices, target_data
 
@@ -216,45 +199,60 @@ def build_filtered_target_index(
 def generate_candidate_pools(
     s1_meta: dict,
     indices: dict,
-    max_per_entity: int = 50,
+    max_per_entity: int = 75,
 ) -> Dict[str, List[str]]:
-    """Retrieve union candidate set for S1 entities from multi-route inverted indices."""
+    """Retrieve union candidate set for S1 entities from multi-route inverted indices.
+    
+    Guarantees fair representation across all routes so address and brand routes
+    are not starved by common core names.
+    """
     idx_core = indices["core"]
     idx_sorted = indices["sorted"]
     idx_concat = indices["concat"]
     idx_brand = indices["brand"]
     idx_postal_num = indices["postal_num"]
     idx_addr_num = indices["addr_num"]
-    idx_prefix = indices.get("prefix", {})
 
     candidates = {}
     for s1_id, meta in s1_meta.items():
         ordered = []
         seen = set()
 
-        def add_route(values):
-            for value in values:
-                if value not in seen:
-                    seen.add(value)
-                    ordered.append(value)
+        def add_from_route(values, max_route: int):
+            added = 0
+            for val in values:
+                if added >= max_route or len(ordered) >= max_per_entity:
+                    break
+                if val not in seen:
+                    seen.add(val)
+                    ordered.append(val)
+                    added += 1
 
-        # Strong name keys first; broader address and prefix routes fill the tail.
-        add_route(idx_core.get(meta["core"], []))
+        # Route 1: Exact core and aliases (up to 20 + 10)
+        add_from_route(idx_core.get(meta["core"], []), 20)
         for alias in meta["aliases"]:
-            add_route(idx_core.get(alias, []))
-        add_route(idx_sorted.get(meta["sorted"], []))
-        if len(meta["concat"]) >= 5:
-            add_route(idx_concat.get(meta["concat"], []))
-        for brand in list(meta["brand"])[:4]:
-            add_route(idx_brand.get(brand, []))
-        if meta.get("prefix"):
-            add_route(idx_prefix.get(meta["prefix"], []))
-        if meta["postal_num_key"]:
-            add_route(idx_postal_num.get(meta["postal_num_key"], []))
-        for addr_key in meta["addr_num_keys"]:
-            add_route(idx_addr_num.get(addr_key, []))
+            add_from_route(idx_core.get(alias, []), 10)
 
-        candidates[s1_id] = ordered[:max_per_entity]
+        # Route 2: Sorted tokens (up to 15)
+        add_from_route(idx_sorted.get(meta["sorted"], []), 15)
+
+        # Route 3: Concatenated string (up to 12)
+        if len(meta["concat"]) >= 5:
+            add_from_route(idx_concat.get(meta["concat"], []), 12)
+
+        # Route 4: Brand distinctive tokens (up to 12)
+        for brand in list(meta["brand"])[:4]:
+            add_from_route(idx_brand.get(brand, []), 10)
+
+        # Route 5: Postal + Street Number (up to 15)
+        if meta["postal_num_key"]:
+            add_from_route(idx_postal_num.get(meta["postal_num_key"], []), 15)
+
+        # Route 6: Street Number + Street Token (up to 12)
+        for addr_key in meta["addr_num_keys"]:
+            add_from_route(idx_addr_num.get(addr_key, []), 10)
+
+        candidates[s1_id] = ordered
 
     return candidates
 
@@ -323,8 +321,7 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
     s1_dict = {}
     needed_keys = {
         "cores": set(), "sorted": set(), "concat": set(),
-        "brand": set(), "postal_num": set(), "addr_num": set(),
-        "prefixes": set()
+        "brand": set(), "postal_num": set(), "addr_num": set()
     }
     s1_meta = {}
 
@@ -337,7 +334,7 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
                 name = row[1] if len(row) > 1 else ""
                 addr = row[2] if len(row) > 2 else ""
                 country = row[3] if len(row) > 3 else ""
-                s1_dict[s1_id] = {"name": name, "address": addr, "country": country}
+                s1_dict[s1_id] = prepare_record(name, addr, country)
 
                 meta = compute_s1_blocking_keys(name, addr, country)
                 s1_meta[s1_id] = meta
@@ -348,17 +345,16 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
                 for b in meta["brand"]: needed_keys["brand"].add(b)
                 if meta["postal_num_key"]: needed_keys["postal_num"].add(meta["postal_num_key"])
                 for ak in meta["addr_num_keys"]: needed_keys["addr_num"].add(ak)
-                if meta.get("prefix"): needed_keys["prefixes"].add(meta["prefix"])
 
     # 3. Index Targets
-    caps = {"core": 200, "sorted": 150, "concat": 100, "brand": 100, "postal_num": 100, "addr_num": 80, "prefix": 50}
+    caps = {"core": 60, "sorted": 50, "concat": 30, "brand": 40, "postal_num": 30, "addr_num": 25}
     indices, target_data = build_filtered_target_index(
         train_dir, ["train_source2.tsv", "train_source3.tsv"], needed_keys, caps
     )
     print(f"Indexed {len(target_data):,} training targets.")
 
     # 4. Generate candidate pools
-    all_cands = generate_candidate_pools(s1_meta, indices, max_per_entity=150)
+    all_cands = generate_candidate_pools(s1_meta, indices, max_per_entity=75)
 
     # Measure blocking recall on validation
     val_gold_total = sum(len(gt.get(s, [])) for s in val_s1_ids)
@@ -394,7 +390,10 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
                 feat_names = sorted(fd.keys())
             train_rows.append([fd[k] for k in feat_names])
             train_labels.append(is_match)
-            train_gate_candidates[s1_id].append(fd)
+            gate_fd = {k: fd[k] for k in GATE_BASE_FEATURES}
+            gate_fd["is_s2"] = fd["is_s2"]
+            gate_fd["is_s3"] = fd["is_s3"]
+            train_gate_candidates[s1_id].append(gate_fd)
 
     X_train = np.array(train_rows, dtype=np.float32)
     y_train = np.array(train_labels, dtype=np.int32)
@@ -404,10 +403,10 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
     print("\nLaunching CatBoost GPU Training on NVIDIA RTX 3060...")
     pos_count = np.sum(y_train == 1)
     neg_count = np.sum(y_train == 0)
-    scale_pos = max(1.0, float(neg_count) / float(2.0 * pos_count)) if pos_count > 0 else 1.0
+    scale_pos = max(1.0, min(2.5, float(neg_count) / float(pos_count))) if pos_count > 0 else 1.0
 
     cb_model = cb.CatBoostClassifier(
-        iterations=500,
+        iterations=600,
         depth=7,
         learning_rate=0.08,
         scale_pos_weight=scale_pos,
@@ -437,7 +436,10 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
             fd = fe.extract_pair_features(s1_rec, c_rec, c_id, rank, pool_sz)
             val_rows.append([fd[k] for k in feat_names])
             val_meta.append((s1_id, c_id))
-            val_gate_candidates[s1_id].append(fd)
+            gate_fd = {k: fd[k] for k in GATE_BASE_FEATURES}
+            gate_fd["is_s2"] = fd["is_s2"]
+            gate_fd["is_s3"] = fd["is_s3"]
+            val_gate_candidates[s1_id].append(gate_fd)
 
     val_s1_scores = defaultdict(list)
     if val_rows:
@@ -459,7 +461,7 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
     gate_model = cb.CatBoostClassifier(
         iterations=350, depth=5, learning_rate=0.06,
         loss_function="Logloss", eval_metric="Logloss",
-        auto_class_weights="Balanced", task_type="CPU", random_seed=42,
+        task_type="CPU", thread_count=4, random_seed=42,
         verbose=False,
     )
     gate_model.fit(X_gate_train, y_gate_train)
@@ -473,17 +475,16 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
     print("\nSweeping Decision Thresholds directly optimizing Macro F0.5...")
     val_gt_local = {s: gt.get(s, []) for s in val_s1_ids}
     best_macro_f05 = -1.0
-    best_tau_s2, best_tau_s3, best_tau_singleton = 0.90, 0.90, 0.50
-    best_res = None
-    pair_grid = [0.80, 0.88, 0.93, 0.97]
-    singleton_grid = [0.35, 0.50, 0.65, 0.80, 0.90]
+    best_tau_s2, best_tau_s3, best_tau_singleton = 0.55, 0.55, 1.01
+    pair_grid = [0.70, 0.80, 0.88, 0.93, 0.96]
+    singleton_grid = [0.75, 0.88, 0.95, 1.01]
 
     for tau_s2 in pair_grid:
         for tau_s3 in pair_grid:
             for tau_singleton in singleton_grid:
                 target_claims = defaultdict(list)
                 for s1_id in val_s1_ids:
-                    if val_singleton_probability.get(s1_id, 1.0) >= tau_singleton:
+                    if tau_singleton < 1.0 and val_singleton_probability.get(s1_id, 1.0) >= tau_singleton:
                         continue
                     for c_id, prob in val_s1_scores.get(s1_id, []):
                         pair_tau = tau_s2 if "s2" in c_id.lower() else tau_s3
@@ -496,7 +497,7 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
                 }
                 current_preds = {}
                 for s1_id in val_s1_ids:
-                    if val_singleton_probability.get(s1_id, 1.0) >= tau_singleton:
+                    if tau_singleton < 1.0 and val_singleton_probability.get(s1_id, 1.0) >= tau_singleton:
                         current_preds[s1_id] = []
                         continue
                     retained = []
@@ -527,6 +528,22 @@ def train_catboost_gpu_model(train_dir: str, n_train: int = 35000, n_val: int = 
     del train_rows, train_labels, X_train, y_train, val_rows, X_val
     gc.collect()
 
+    os.makedirs("output", exist_ok=True)
+    cb_model.save_model("output/catboost_gpu_model.cbm")
+    with open("output/gate_model.pkl", "wb") as f_gate:
+        pickle.dump(gate_model, f_gate)
+    meta = {
+        "feat_names": feat_names,
+        "gate_feat_names": gate_feat_names,
+        "best_tau": best_tau,
+        "best_tau_singleton": best_tau_singleton,
+        "best_macro_f05": best_macro_f05,
+        "best_res": best_res
+    }
+    with open("output/model_metadata.json", "w") as f_meta:
+        json.dump(meta, f_meta, indent=2)
+    print("\nSaved trained models to output/catboost_gpu_model.cbm and output/gate_model.pkl")
+
     return cb_model, feat_names, best_tau, gate_model, gate_feat_names, best_tau_singleton, best_macro_f05, best_res
 
 
@@ -542,7 +559,7 @@ def run_full_test_gpu_inference(
     tau_singleton: float,
     test_dir: str = TEST_DIR,
     output_dir: str = OUTPUT_DIR,
-    batch_size_s1: int = 50000,
+    batch_size_s1: int = 25000,
 ):
     print("\n" + "=" * 80)
     print(" [STAGE 2] FULL TEST SET GPU INFERENCE (1.73M S1 ENTITIES)")
@@ -556,8 +573,7 @@ def run_full_test_gpu_inference(
     t0 = time.time()
     needed_keys = {
         "cores": set(), "sorted": set(), "concat": set(),
-        "brand": set(), "postal_num": set(), "addr_num": set(),
-        "prefixes": set()
+        "brand": set(), "postal_num": set(), "addr_num": set()
     }
     total_test_s1 = 0
 
@@ -578,14 +594,13 @@ def run_full_test_gpu_inference(
             for b in meta["brand"]: needed_keys["brand"].add(b)
             if meta["postal_num_key"]: needed_keys["postal_num"].add(meta["postal_num_key"])
             for ak in meta["addr_num_keys"]: needed_keys["addr_num"].add(ak)
-            if meta.get("prefix"): needed_keys["prefixes"].add(meta["prefix"])
 
     print(f"Pass 1 complete in {time.time()-t0:.1f}s. Loaded {total_test_s1:,} test query records.")
 
     # Pass 2: Stream target files (test_source2 and test_source3)
     print("\nPass 2: Indexing test targets against needed query keys...")
     t0 = time.time()
-    caps = {"core": 250, "sorted": 200, "concat": 150, "brand": 150, "postal_num": 150, "addr_num": 100, "prefix": 60}
+    caps = {"core": 60, "sorted": 50, "concat": 30, "brand": 40, "postal_num": 30, "addr_num": 25}
     indices, target_data = build_filtered_target_index(
         test_dir, ["test_source2.tsv", "test_source3.tsv"], needed_keys, caps
     )
@@ -616,7 +631,7 @@ def run_full_test_gpu_inference(
                 batch_s1_meta[s1_id] = compute_s1_blocking_keys(name, addr, country)
 
             # Retrieve candidates for batch
-            cands_dict = generate_candidate_pools(batch_s1_meta, indices, max_per_entity=150)
+            cands_dict = generate_candidate_pools(batch_s1_meta, indices, max_per_entity=75)
 
             # Write candidate pairs to temp stream file immediately to free RAM
             for s1_id, name, addr, country in batch_records:
@@ -629,7 +644,7 @@ def run_full_test_gpu_inference(
             batch_gate_candidates = {s1_id: [] for s1_id, _, _, _ in batch_records}
 
             for s1_id, name, addr, country in batch_records:
-                s1_rec = {"name": name, "address": addr, "country": country}
+                s1_rec = prepare_record(name, addr, country)
                 cand_list = cands_dict.get(s1_id, [])
                 pool_sz = len(cand_list)
 
@@ -637,23 +652,28 @@ def run_full_test_gpu_inference(
                     c_rec = target_data.get(c_id)
                     if not c_rec:
                         continue
-                    # Soft country gate
+                    # Soft country gate: only filter if both non-empty AND discordant
                     s1_c = s1_rec["country"]
-                    c_c = c_rec["country"]
+                    c_c = c_rec.get("country", "")
                     if s1_c and c_c and s1_c != c_c:
                         continue
 
                     fd = fe.extract_pair_features(s1_rec, c_rec, c_id, rank, pool_sz)
                     pair_rows.append([fd[k] for k in feat_names])
                     pair_meta.append((s1_id, c_id))
-                    batch_gate_candidates[s1_id].append(fd)
+                    gate_fd = {k: fd[k] for k in GATE_BASE_FEATURES}
+                    gate_fd["is_s2"] = fd["is_s2"]
+                    gate_fd["is_s3"] = fd["is_s3"]
+                    batch_gate_candidates[s1_id].append(gate_fd)
 
-            gate_rows, current_gate_feat_names = aggregate_singleton_features(batch_gate_candidates)
-            if current_gate_feat_names != gate_feat_names:
-                raise RuntimeError("Singleton gate feature schema changed between training and inference.")
-            gate_ids = list(gate_rows)
-            X_gate_batch = np.asarray([gate_rows[s] for s in gate_ids], dtype=np.float32)
-            batch_singleton_prob = dict(zip(gate_ids, map(float, gate_model.predict_proba(X_gate_batch)[:, 1])))
+            batch_singleton_prob = {}
+            if tau_singleton < 1.0:
+                gate_rows, current_gate_feat_names = aggregate_singleton_features(batch_gate_candidates)
+                if current_gate_feat_names != gate_feat_names:
+                    raise RuntimeError("Singleton gate feature schema changed between training and inference.")
+                gate_ids = list(gate_rows)
+                X_gate_batch = np.asarray([gate_rows[s] for s in gate_ids], dtype=np.float32)
+                batch_singleton_prob = dict(zip(gate_ids, map(float, gate_model.predict_proba(X_gate_batch)[:, 1])))
 
             if pair_rows:
                 X_batch = np.array(pair_rows, dtype=np.float32)
@@ -663,7 +683,7 @@ def run_full_test_gpu_inference(
                 total_gpu_time += (time.time() - t_gpu_start)
 
                 for (s1_id, c_id), prob in zip(pair_meta, probs):
-                    if batch_singleton_prob.get(s1_id, 1.0) >= tau_singleton:
+                    if tau_singleton < 1.0 and batch_singleton_prob.get(s1_id, 1.0) >= tau_singleton:
                         gate_blocked_count += 1
                         continue
                     pair_tau = best_tau["s2"] if "s2" in c_id.lower() else best_tau["s3"]
@@ -689,14 +709,14 @@ def run_full_test_gpu_inference(
                     batch_num += 1
                     process_s1_batch(current_s1_batch)
                     processed_so_far = batch_num * batch_size_s1
-                    print(f"  Batch {batch_num:2d}: {processed_so_far:,} / {total_test_s1:,} ({processed_so_far/total_test_s1*100:.1f}%) | Pairs Scored: {total_candidate_pairs:,} | Elapsed: {time.time()-t0:.1f}s")
+                    print(f"  Batch {batch_num:2d}: {processed_so_far:,} / {total_test_s1:,} ({processed_so_far/total_test_s1*100:.1f}%) | Pairs Scored: {total_candidate_pairs:,} | Elapsed: {time.time()-t0:.1f}s", flush=True)
                     current_s1_batch = []
                     gc.collect()
 
             if current_s1_batch:
                 batch_num += 1
                 process_s1_batch(current_s1_batch)
-                print(f"  Final Batch {batch_num:2d}: {total_test_s1:,} / {total_test_s1:,} (100.0%) | Total Pairs Scored: {total_candidate_pairs:,}")
+                print(f"  Final Batch {batch_num:2d}: {total_test_s1:,} / {total_test_s1:,} (100.0%) | Total Pairs Scored: {total_candidate_pairs:,}", flush=True)
                 current_s1_batch = []
                 gc.collect()
 
@@ -819,12 +839,32 @@ def main():
     print(f" Target Device: NVIDIA GeForce RTX 3060 (12GB VRAM)")
     print("=" * 80)
 
-    # 1. Train Model on GPU
-    cb_model, feat_names, best_tau, gate_model, gate_feat_names, tau_singleton, best_f05, best_res = train_catboost_gpu_model(
-        train_dir=args.train_dir,
-        n_train=args.n_train,
-        n_val=args.n_val
-    )
+    # 1. Train Model on GPU or Load Cached
+    model_path = os.path.join(args.output_dir, "catboost_gpu_model.cbm")
+    gate_path = os.path.join(args.output_dir, "gate_model.pkl")
+    meta_path = os.path.join(args.output_dir, "model_metadata.json")
+
+    if args.skip_train and os.path.exists(model_path) and os.path.exists(gate_path) and os.path.exists(meta_path):
+        print(f"\n[CACHE] Loading pre-trained models from {args.output_dir}...")
+        cb_model = cb.CatBoostClassifier()
+        cb_model.load_model(model_path)
+        with open(gate_path, "rb") as f_gate:
+            gate_model = pickle.load(f_gate)
+        with open(meta_path, "r") as f_meta:
+            meta = json.load(f_meta)
+        feat_names = meta["feat_names"]
+        best_tau = meta["best_tau"]
+        gate_feat_names = meta["gate_feat_names"]
+        tau_singleton = meta["best_tau_singleton"]
+        best_f05 = meta["best_macro_f05"]
+        best_res = meta["best_res"]
+        print(f"Loaded: Optimal Tau S2={best_tau['s2']:.3f}, S3={best_tau['s3']:.3f}, singleton={tau_singleton:.3f} | Macro F0.5={best_f05:.4f}")
+    else:
+        cb_model, feat_names, best_tau, gate_model, gate_feat_names, tau_singleton, best_f05, best_res = train_catboost_gpu_model(
+            train_dir=args.train_dir,
+            n_train=args.n_train,
+            n_val=args.n_val
+        )
 
     # 2. Run Full Test Set GPU Inference
     sub_results = run_full_test_gpu_inference(

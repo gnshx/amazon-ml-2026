@@ -180,6 +180,38 @@ def jaccard_similarity(set_a: set, set_b: set) -> float:
     return inter / union if union > 0 else 0.0
 
 
+def prepare_record(raw_name: str, raw_addr: str, raw_country: str) -> dict:
+    """Pre-compute normalized tokens and attributes once for an entity."""
+    raw_addr_str = raw_addr or ""
+    has_addr = 1.0 if raw_addr_str.strip() else 0.0
+    norm_name = normalize_text(raw_name)
+    core = extract_core_name(raw_name)
+    sorted_k = extract_sorted_key(raw_name)
+    tokens = set(extract_core_tokens(raw_name))
+    brand = extract_distinctive_name_tokens(raw_name)
+    postal, num, dist_addr = extract_postal_and_number(raw_addr_str)
+    norm_addr = normalize_text(raw_addr_str) if has_addr else ""
+    ngrams = compute_char_ngrams(core, 3)
+    is_non_ascii = 1.0 if is_non_ascii_name(raw_name) else 0.0
+    return {
+        "raw_name": raw_name,
+        "raw_addr": raw_addr_str,
+        "country": (raw_country or "").strip().lower(),
+        "has_addr": has_addr,
+        "norm_name": norm_name,
+        "core": core,
+        "sorted": sorted_k,
+        "tokens": tokens,
+        "brand": brand,
+        "postal": postal,
+        "num": num,
+        "dist_addr": dist_addr,
+        "norm_addr": norm_addr,
+        "ngrams": ngrams,
+        "is_non_ascii": is_non_ascii,
+    }
+
+
 class FeatureExtractor:
     """High-Performance Pairwise Feature Vector Generator."""
 
@@ -188,39 +220,30 @@ class FeatureExtractor:
 
     def extract_pair_features(
         self,
-        s1_data: Dict[str, str],
-        cand_data: Dict[str, str],
+        s1_data: Dict[str, any],
+        cand_data: Dict[str, any],
         cand_id: str = "",
         cand_rank: int = 1,
         pool_size: int = 1,
     ) -> Dict[str, float]:
         """Extracts complete feature dictionary for (Source 1, Candidate)."""
-        s1_raw_name = s1_data.get("name", "")
-        s1_raw_addr = s1_data.get("address", "")
-        s1_country = s1_data.get("country", "").strip().lower()
+        s1 = s1_data if "norm_name" in s1_data else prepare_record(
+            s1_data.get("name", ""), s1_data.get("address", ""), s1_data.get("country", "")
+        )
+        c = cand_data if "norm_name" in cand_data else prepare_record(
+            cand_data.get("name", ""), cand_data.get("address", ""), cand_data.get("country", "")
+        )
 
-        c_raw_name = cand_data.get("name", "")
-        c_raw_addr = cand_data.get("address", "")
-        c_country = cand_data.get("country", "").strip().lower()
-
-        # Missingness flags
-        s1_has_addr = 1.0 if s1_raw_addr.strip() else 0.0
-        c_has_addr = 1.0 if c_raw_addr.strip() else 0.0
+        s1_has_addr = s1["has_addr"]
+        c_has_addr = c["has_addr"]
         both_have_addr = 1.0 if (s1_has_addr and c_has_addr) else 0.0
         either_addr_missing = 1.0 if (not s1_has_addr or not c_has_addr) else 0.0
 
-        # Normalizations
-        s1_norm_name = normalize_text(s1_raw_name)
-        c_norm_name = normalize_text(c_raw_name)
-        s1_core = extract_core_name(s1_raw_name)
-        c_core = extract_core_name(c_raw_name)
-        s1_sorted = extract_sorted_key(s1_raw_name)
-        c_sorted = extract_sorted_key(c_raw_name)
-
-        s1_tokens = set(extract_core_tokens(s1_raw_name))
-        c_tokens = set(extract_core_tokens(c_raw_name))
-        s1_brand = extract_distinctive_name_tokens(s1_raw_name)
-        c_brand = extract_distinctive_name_tokens(c_raw_name)
+        s1_norm_name, c_norm_name = s1["norm_name"], c["norm_name"]
+        s1_core, c_core = s1["core"], c["core"]
+        s1_sorted, c_sorted = s1["sorted"], c["sorted"]
+        s1_tokens, c_tokens = s1["tokens"], c["tokens"]
+        s1_brand, c_brand = s1["brand"], c["brand"]
 
         # Name Similarities
         if HAS_RAPIDFUZZ and s1_norm_name and c_norm_name:
@@ -241,9 +264,7 @@ class FeatureExtractor:
         name_token_jaccard = jaccard_similarity(s1_tokens, c_tokens)
 
         # Character n-grams (typo robustness)
-        s1_ngrams = compute_char_ngrams(s1_core, 3)
-        c_ngrams = compute_char_ngrams(c_core, 3)
-        char_ngram_jaccard = jaccard_similarity(s1_ngrams, c_ngrams)
+        char_ngram_jaccard = jaccard_similarity(s1["ngrams"], c["ngrams"])
 
         # Distinctive Brand Overlap
         brand_overlap_count = float(len(s1_brand.intersection(c_brand)))
@@ -256,15 +277,14 @@ class FeatureExtractor:
         mean_shared_idf = (sum(shared_idfs) / len(shared_idfs)) if shared_idfs else 0.0
 
         # Address Decomposition
-        s1_postal, s1_num, s1_dist_addr = extract_postal_and_number(s1_raw_addr)
-        c_postal, c_num, c_dist_addr = extract_postal_and_number(c_raw_addr)
+        s1_postal, c_postal = s1["postal"], c["postal"]
+        s1_num, c_num = s1["num"], c["num"]
+        s1_dist_addr, c_dist_addr = s1["dist_addr"], c["dist_addr"]
 
         # Address Fuzzy Similarities
         if HAS_RAPIDFUZZ and both_have_addr:
-            s1_norm_addr = normalize_text(s1_raw_addr)
-            c_norm_addr = normalize_text(c_raw_addr)
-            addr_token_set = fuzz.token_set_ratio(s1_norm_addr, c_norm_addr) / 100.0
-            addr_token_sort = fuzz.token_sort_ratio(s1_norm_addr, c_norm_addr) / 100.0
+            addr_token_set = fuzz.token_set_ratio(s1["norm_addr"], c["norm_addr"]) / 100.0
+            addr_token_sort = fuzz.token_sort_ratio(s1["norm_addr"], c["norm_addr"]) / 100.0
         else:
             addr_token_set = 0.0
             addr_token_sort = 0.0
@@ -283,6 +303,7 @@ class FeatureExtractor:
         num_conflict = 1.0 if (has_both_num and s1_num != c_num) else 0.0
 
         # Open-Set Country Relational Signal (+1: match, 0: conflict, -1: unknown/missing)
+        s1_country, c_country = s1["country"], c["country"]
         if not s1_country or not c_country:
             country_rel = -1.0
         elif s1_country == c_country:
@@ -291,8 +312,8 @@ class FeatureExtractor:
             country_rel = 0.0
 
         # Non-Latin Indic script signal
-        s1_non_ascii = 1.0 if is_non_ascii_name(s1_raw_name) else 0.0
-        c_non_ascii = 1.0 if is_non_ascii_name(c_raw_name) else 0.0
+        s1_non_ascii = s1["is_non_ascii"]
+        c_non_ascii = c["is_non_ascii"]
         cross_script = 1.0 if (s1_non_ascii != c_non_ascii) else 0.0
 
         # Target Source Type

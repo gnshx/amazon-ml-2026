@@ -12,3 +12,6 @@ catboost_info/
 *.log
 __pycache__/
 *.pyc
+.venv/
+*.zip
+student_resource/
