@@ -1,0 +1,17 @@
+Loading cached 50,000 entity benchmark...
+Loaded 50,000 S1 entities and 1,156,716 targets.
+Loaded ground truth for 50,000 benchmark entities.
+
+Running Parameter Sweep on 50k Benchmark:
+Cutoff: 0.81 | MinWordLen:  3 | SingFilter: True  -> Macro F0.5: 0.7111 | Sing Acc: 0.4313 | Non-Sing: 0.7277
+Cutoff: 0.81 | MinWordLen:  3 | SingFilter: False -> Macro F0.5: 0.7107 | Sing Acc: 0.4252 | Non-Sing: 0.7277
+Cutoff: 0.81 | MinWordLen: 14 | SingFilter: True  -> Macro F0.5: 0.7123 | Sing Acc: 0.4355 | Non-Sing: 0.7288
+Cutoff: 0.81 | MinWordLen: 14 | SingFilter: False -> Macro F0.5: 0.7120 | Sing Acc: 0.4295 | Non-Sing: 0.7288
+Cutoff: 0.82 | MinWordLen:  3 | SingFilter: True  -> Macro F0.5: 0.7111 | Sing Acc: 0.4313 | Non-Sing: 0.7277
+Cutoff: 0.82 | MinWordLen:  3 | SingFilter: False -> Macro F0.5: 0.7107 | Sing Acc: 0.4252 | Non-Sing: 0.7277
+Cutoff: 0.82 | MinWordLen: 14 | SingFilter: True  -> Macro F0.5: 0.7123 | Sing Acc: 0.4355 | Non-Sing: 0.7288
+Cutoff: 0.82 | MinWordLen: 14 | SingFilter: False -> Macro F0.5: 0.7120 | Sing Acc: 0.4295 | Non-Sing: 0.7288
+Cutoff: 0.83 | MinWordLen:  3 | SingFilter: True  -> Macro F0.5: 0.6805 | Sing Acc: 0.4594 | Non-Sing: 0.6937
+Cutoff: 0.83 | MinWordLen:  3 | SingFilter: False -> Macro F0.5: 0.6805 | Sing Acc: 0.4594 | Non-Sing: 0.6937
+Cutoff: 0.83 | MinWordLen: 14 | SingFilter: True  -> Macro F0.5: 0.6818 | Sing Acc: 0.4637 | Non-Sing: 0.6947
+Cutoff: 0.83 | MinWordLen: 14 | SingFilter: False -> Macro F0.5: 0.6818 | Sing Acc: 0.4637 | Non-Sing: 0.6947

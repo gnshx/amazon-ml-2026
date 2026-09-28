@@ -1,0 +1,225 @@
+{
+  "pipeline": "v8_lgbm_gbdt",
+  "runtime_minutes": 8.89,
+  "data_audit": {
+    "total_s1": 2206821,
+    "singleton_count": 123247,
+    "singleton_pct": 5.584820880352326,
+    "non_singleton_count": 2083574,
+    "mean_matches_per_non_singleton": 3.66599170463828,
+    "max_matches": 11,
+    "shared_targets_count": 0,
+    "target_exclusivity_violated": false,
+    "fold_distribution": {
+      "0": 441365,
+      "1": 441364,
+      "2": 441364,
+      "3": 441364,
+      "4": 441364
+    },
+    "total_ground_truth_links": 7638365
+  },
+  "model_validation": {
+    "n_train_entities": 25000,
+    "n_val_entities": 12000,
+    "blocking_recall_pct": 79.79,
+    "macro_f05": 0.4051,
+    "optimal_tau": 0.999,
+    "singleton_accuracy": 0.4815,
+    "non_singleton_f05": 0.4005,
+    "singleton_count": 675,
+    "non_singleton_count": 11325,
+    "threshold_sweep": [
+      {
+        "tau": 0.85,
+        "macro_f05": 0.22478304792423964,
+        "singleton_acc": 0.028148148148148148,
+        "non_singleton_f05": 0.2365030088380464
+      },
+      {
+        "tau": 0.9,
+        "macro_f05": 0.25869584639894505,
+        "singleton_acc": 0.04148148148148148,
+        "non_singleton_f05": 0.271642397950317
+      },
+      {
+        "tau": 0.92,
+        "macro_f05": 0.268038037621378,
+        "singleton_acc": 0.04888888888888889,
+        "non_singleton_f05": 0.28109990741338065
+      },
+      {
+        "tau": 0.94,
+        "macro_f05": 0.2771497328093715,
+        "singleton_acc": 0.054814814814814816,
+        "non_singleton_f05": 0.29040148288851725
+      },
+      {
+        "tau": 0.95,
+        "macro_f05": 0.2828973286694489,
+        "singleton_acc": 0.06074074074074074,
+        "non_singleton_f05": 0.2961384498042725
+      },
+      {
+        "tau": 0.96,
+        "macro_f05": 0.29110728908218,
+        "singleton_acc": 0.06518518518518518,
+        "non_singleton_f05": 0.30457284494359027
+      },
+      {
+        "tau": 0.97,
+        "macro_f05": 0.3037660491205011,
+        "singleton_acc": 0.08,
+        "non_singleton_f05": 0.317103098405829
+      },
+      {
+        "tau": 0.975,
+        "macro_f05": 0.3131392185146749,
+        "singleton_acc": 0.09333333333333334,
+        "non_singleton_f05": 0.3262402315387284
+      },
+      {
+        "tau": 0.98,
+        "macro_f05": 0.3248359983063705,
+        "singleton_acc": 0.10518518518518519,
+        "non_singleton_f05": 0.33792776862485174
+      },
+      {
+        "tau": 0.985,
+        "macro_f05": 0.33753798526722806,
+        "singleton_acc": 0.1259259259259259,
+        "non_singleton_f05": 0.3501506245657163
+      },
+      {
+        "tau": 0.99,
+        "macro_f05": 0.35106297018474675,
+        "singleton_acc": 0.15407407407407409,
+        "non_singleton_f05": 0.3628040302178332
+      },
+      {
+        "tau": 0.993,
+        "macro_f05": 0.3584709722408553,
+        "singleton_acc": 0.18814814814814815,
+        "non_singleton_f05": 0.3686226637430696
+      },
+      {
+        "tau": 0.995,
+        "macro_f05": 0.3683053097382563,
+        "singleton_acc": 0.21925925925925926,
+        "non_singleton_f05": 0.37718884917077933
+      },
+      {
+        "tau": 0.997,
+        "macro_f05": 0.3816238300046798,
+        "singleton_acc": 0.2903703703703704,
+        "non_singleton_f05": 0.38706277792990357
+      },
+      {
+        "tau": 0.999,
+        "macro_f05": 0.4050652452703285,
+        "singleton_acc": 0.48148148148148145,
+        "non_singleton_f05": 0.400510635165028
+      }
+    ],
+    "top_features": [
+      {
+        "feature": "token_sort",
+        "importance": 2316
+      },
+      {
+        "feature": "jaro_winkler",
+        "importance": 2221
+      },
+      {
+        "feature": "addr_token_sort",
+        "importance": 1846
+      },
+      {
+        "feature": "partial_ratio",
+        "importance": 1803
+      },
+      {
+        "feature": "cand_rank",
+        "importance": 1678
+      },
+      {
+        "feature": "char_ngram_jaccard",
+        "importance": 1602
+      },
+      {
+        "feature": "token_set",
+        "importance": 1417
+      },
+      {
+        "feature": "lev_ratio",
+        "importance": 1369
+      },
+      {
+        "feature": "name_x_addr",
+        "importance": 1300
+      },
+      {
+        "feature": "name_token_jaccard",
+        "importance": 1226
+      },
+      {
+        "feature": "addr_token_set",
+        "importance": 1115
+      },
+      {
+        "feature": "addr_dist_jaccard",
+        "importance": 1068
+      },
+      {
+        "feature": "addr_dist_overlap_count",
+        "importance": 1028
+      },
+      {
+        "feature": "name_strength",
+        "importance": 942
+      },
+      {
+        "feature": "addr_strength",
+        "importance": 786
+      },
+      {
+        "feature": "brand_overlap_count",
+        "importance": 628
+      },
+      {
+        "feature": "is_s2",
+        "importance": 483
+      },
+      {
+        "feature": "num_conflict",
+        "importance": 424
+      },
+      {
+        "feature": "num_match",
+        "importance": 402
+      },
+      {
+        "feature": "has_both_num",
+        "importance": 149
+      }
+    ],
+    "singleton_gate": {
+      "true_singletons": 675,
+      "correctly_predicted_singleton": 298,
+      "false_singleton_assigns": 377,
+      "singleton_gate_precision": 0.4414814814814815,
+      "true_non_singletons": 11325,
+      "found_matches": 9908,
+      "missed_matches": 1417
+    }
+  },
+  "test_submission": {
+    "total_test_entities": 1732544,
+    "total_matches": 1393727,
+    "singleton_preds": 1027955,
+    "singleton_pct": 59.33211508625467,
+    "matching_file_mb": 39.4,
+    "candidate_file_mb": 239.5,
+    "tau_used": 0.999
+  }
+}

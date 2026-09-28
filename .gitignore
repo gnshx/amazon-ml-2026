@@ -10,6 +10,7 @@ catboost_info/
 *.npy
 *.npz
 *.log
+!docs/logs/**
 __pycache__/
 *.pyc
 .venv/

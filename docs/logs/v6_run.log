@@ -1,0 +1,58 @@
+[02:26:00] ================================================================================
+[02:26:00]  [PRODUCTION PIPELINE V6 ULTIMATE] Amazon ML Challenge 2026
+[02:26:00]  12-Route Hybrid Blocker | Enhanced Scoring | Singleton Protection Gate
+[02:26:00] ================================================================================
+[02:26:00] 
+[Step 1/5] Pass 1: Streaming Source 1 to collect query keys (12 routes)...
+[02:26:54] Collected query keys from 1,732,544 Source 1 records in 54.8s.
+[02:26:54] Unique keys: Core=1,085,678, Sorted=1,072,458, Bigram=712,288, Phone=32,182
+[02:26:54] 
+[Step 2/5] Pass 2: Streaming and indexing test targets (S2 + S3)...
+[02:26:54]   Streaming test_source2.tsv...
+[02:27:41]     test_source2.tsv: 1,000,000 lines, 938,311 targets loaded...
+[02:28:24]     test_source2.tsv: 2,000,000 lines, 1,841,848 targets loaded...
+[02:29:08]     test_source2.tsv: 3,000,000 lines, 2,720,587 targets loaded...
+[02:29:50]     test_source2.tsv: 4,000,000 lines, 3,579,794 targets loaded...
+[02:30:29]   Streaming test_source3.tsv...
+[02:31:08]     test_source3.tsv: 1,000,000 lines, 5,173,430 targets loaded...
+[02:31:52]     test_source3.tsv: 2,000,000 lines, 6,003,810 targets loaded...
+[02:32:31]     test_source3.tsv: 3,000,000 lines, 6,819,840 targets loaded...
+[02:33:17]     test_source3.tsv: 4,000,000 lines, 7,620,707 targets loaded...
+[02:33:55]     test_source3.tsv: 5,000,000 lines, 8,404,400 targets loaded...
+[02:33:58] Indexed targets in 423.5s. Loaded 8,468,089 relevant targets into memory.
+[02:33:58] 
+[Step 3/5] Pass 3: Matching 1.73M S1 entities against indexed targets...
+[02:34:46]   Chunk  1: 80,000/1,732,544 (4.6%) | 1,776 ent/s | Elapsed: 48s
+[02:35:42]   Chunk  2: 160,000/1,732,544 (9.2%) | 1,763 ent/s | Elapsed: 104s
+[02:36:39]   Chunk  3: 240,000/1,732,544 (13.9%) | 1,759 ent/s | Elapsed: 161s
+[02:37:39]   Chunk  4: 320,000/1,732,544 (18.5%) | 1,652 ent/s | Elapsed: 221s
+[02:39:27]   Chunk  5: 400,000/1,732,544 (23.1%) | 904 ent/s | Elapsed: 329s
+[02:43:39]   Chunk  6: 480,000/1,732,544 (27.7%) | 600 ent/s | Elapsed: 581s
+[03:24:02]   Chunk  7: 560,000/1,732,544 (32.3%) | 42 ent/s | Elapsed: 3005s
+[03:36:19]   Chunk  8: 640,000/1,732,544 (36.9%) | 402 ent/s | Elapsed: 3742s
+[03:41:44]   Chunk  9: 720,000/1,732,544 (41.6%) | 432 ent/s | Elapsed: 4066s
+[03:54:49]   Chunk 10: 800,000/1,732,544 (46.2%) | 162 ent/s | Elapsed: 4851s
+[04:15:36]   Chunk 11: 880,000/1,732,544 (50.8%) | 95 ent/s | Elapsed: 6098s
+[04:38:53]   Chunk 12: 960,000/1,732,544 (55.4%) | 119 ent/s | Elapsed: 7495s
+[05:24:30]   Chunk 13: 1,040,000/1,732,544 (60.0%) | 44 ent/s | Elapsed: 10232s
+[05:54:20]   Chunk 14: 1,120,000/1,732,544 (64.6%) | 145 ent/s | Elapsed: 12022s
+[06:48:26]   Chunk 15: 1,200,000/1,732,544 (69.3%) | 79 ent/s | Elapsed: 15268s
+[07:53:33]   Chunk 16: 1,280,000/1,732,544 (73.9%) | 86 ent/s | Elapsed: 19175s
+[09:35:29]   Chunk 17: 1,360,000/1,732,544 (78.5%) | 34 ent/s | Elapsed: 25291s
+[11:40:25]   Chunk 18: 1,440,000/1,732,544 (83.1%) | 23 ent/s | Elapsed: 32787s
+[14:46:50]   Chunk 19: 1,520,000/1,732,544 (87.7%) | 23 ent/s | Elapsed: 43972s
+[18:45:56]   Chunk 20: 1,600,000/1,732,544 (92.3%) | 19 ent/s | Elapsed: 58318s
+[21:35:17]   Chunk 21: 1,680,000/1,732,544 (97.0%) | 37 ent/s | Elapsed: 68479s
+[23:41:00]   Final Chunk 22: 1,732,544/1,732,544 (100.0%) in 76021.9s
+[23:41:00] 
+Step 3 Matching finished in 76022.1s across 1,732,544 entities.
+[23:41:00] 
+[Step 4/5] Resolving 1-to-1 Mutual-Best Target Owners...
+[01:45:26] Resolved 6,761,573 exclusive target winners in 7465.6s.
+[01:45:26] 
+[Step 5/5] Streaming final output TSVs with Singleton Protection Gate...
+[02:20:11] Wrote 1,732,544 records in 2085.1s.
+[02:20:11]   matching_results.tsv: 104.5 MB | 6,761,573 total links | 65,406 singletons (3.78%)
+[02:20:11]   candidate_pairs.tsv:  3187.5 MB
+[02:20:11] 
+>>> Pipeline V6 ULTIMATE Run Finished Successfully! <<<

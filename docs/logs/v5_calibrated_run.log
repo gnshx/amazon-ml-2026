@@ -1,0 +1,62 @@
+[2026-09-27 01:31:39] ================================================================================
+[2026-09-27 01:31:39]  [PRODUCTION ENGINE V5] Amazon ML Challenge 2026
+[2026-09-27 01:31:39]  Zero Swap Thrashing | Multi-Route Blocking | Category Guard | Calibrated Resolution
+[2026-09-27 01:31:39] ================================================================================
+[2026-09-27 01:31:39] 
+[Step 1/5] Pass 1: Streaming test S1 records to collect query keys...
+[2026-09-27 01:32:27] Pass 1 complete. Indexed query keys from 1,732,544 test entities in 48.0s.
+[2026-09-27 01:32:27] 
+[Step 2/5] Pass 2: Streaming and indexing test targets (S2 + S3)...
+[2026-09-27 01:32:27]   Streaming test_source2.tsv...
+[2026-09-27 01:34:58]   Streaming test_source3.tsv...
+[2026-09-27 01:37:32] Pass 2 complete in 305.1s. Loaded 5,346,939 test targets (RAM ~7.2 GB).
+[2026-09-27 01:37:32] 
+[Step 3/5] Streaming Multi-Route Matching across 1.73M Entities (Chunks of 50,000)...
+[2026-09-27 01:37:50]   Chunk  1: 50,000 / 1,732,544 (2.9%) | 3,118 entities/s | Elapsed: 17s
+[2026-09-27 01:38:09]   Chunk  2: 100,000 / 1,732,544 (5.8%) | 3,111 entities/s | Elapsed: 37s
+[2026-09-27 01:38:29]   Chunk  3: 150,000 / 1,732,544 (8.7%) | 3,112 entities/s | Elapsed: 56s
+[2026-09-27 01:38:48]   Chunk  4: 200,000 / 1,732,544 (11.5%) | 3,102 entities/s | Elapsed: 76s
+[2026-09-27 01:39:08]   Chunk  5: 250,000 / 1,732,544 (14.4%) | 3,093 entities/s | Elapsed: 96s
+[2026-09-27 01:39:27]   Chunk  6: 300,000 / 1,732,544 (17.3%) | 3,103 entities/s | Elapsed: 115s
+[2026-09-27 01:39:47]   Chunk  7: 350,000 / 1,732,544 (20.2%) | 3,095 entities/s | Elapsed: 135s
+[2026-09-27 01:40:07]   Chunk  8: 400,000 / 1,732,544 (23.1%) | 3,098 entities/s | Elapsed: 155s
+[2026-09-27 01:40:27]   Chunk  9: 450,000 / 1,732,544 (26.0%) | 3,074 entities/s | Elapsed: 174s
+[2026-09-27 01:40:46]   Chunk 10: 500,000 / 1,732,544 (28.9%) | 3,094 entities/s | Elapsed: 194s
+[2026-09-27 01:41:06]   Chunk 11: 550,000 / 1,732,544 (31.7%) | 3,103 entities/s | Elapsed: 214s
+[2026-09-27 01:41:26]   Chunk 12: 600,000 / 1,732,544 (34.6%) | 3,090 entities/s | Elapsed: 233s
+[2026-09-27 01:41:45]   Chunk 13: 650,000 / 1,732,544 (37.5%) | 3,100 entities/s | Elapsed: 253s
+[2026-09-27 01:42:05]   Chunk 14: 700,000 / 1,732,544 (40.4%) | 3,095 entities/s | Elapsed: 273s
+[2026-09-27 01:42:25]   Chunk 15: 750,000 / 1,732,544 (43.3%) | 3,073 entities/s | Elapsed: 293s
+[2026-09-27 01:42:44]   Chunk 16: 800,000 / 1,732,544 (46.2%) | 3,090 entities/s | Elapsed: 312s
+[2026-09-27 01:43:04]   Chunk 17: 850,000 / 1,732,544 (49.1%) | 3,083 entities/s | Elapsed: 332s
+[2026-09-27 01:43:24]   Chunk 18: 900,000 / 1,732,544 (51.9%) | 3,095 entities/s | Elapsed: 352s
+[2026-09-27 01:43:44]   Chunk 19: 950,000 / 1,732,544 (54.8%) | 3,091 entities/s | Elapsed: 371s
+[2026-09-27 01:44:03]   Chunk 20: 1,000,000 / 1,732,544 (57.7%) | 3,082 entities/s | Elapsed: 391s
+[2026-09-27 01:44:23]   Chunk 21: 1,050,000 / 1,732,544 (60.6%) | 3,071 entities/s | Elapsed: 411s
+[2026-09-27 01:44:43]   Chunk 22: 1,100,000 / 1,732,544 (63.5%) | 3,100 entities/s | Elapsed: 431s
+[2026-09-27 01:45:03]   Chunk 23: 1,150,000 / 1,732,544 (66.4%) | 3,084 entities/s | Elapsed: 451s
+[2026-09-27 01:45:23]   Chunk 24: 1,200,000 / 1,732,544 (69.3%) | 3,090 entities/s | Elapsed: 471s
+[2026-09-27 01:45:43]   Chunk 25: 1,250,000 / 1,732,544 (72.1%) | 3,077 entities/s | Elapsed: 491s
+[2026-09-27 01:46:03]   Chunk 26: 1,300,000 / 1,732,544 (75.0%) | 3,081 entities/s | Elapsed: 511s
+[2026-09-27 01:46:23]   Chunk 27: 1,350,000 / 1,732,544 (77.9%) | 3,099 entities/s | Elapsed: 530s
+[2026-09-27 01:46:42]   Chunk 28: 1,400,000 / 1,732,544 (80.8%) | 3,091 entities/s | Elapsed: 550s
+[2026-09-27 01:47:02]   Chunk 29: 1,450,000 / 1,732,544 (83.7%) | 3,090 entities/s | Elapsed: 570s
+[2026-09-27 01:47:22]   Chunk 30: 1,500,000 / 1,732,544 (86.6%) | 3,085 entities/s | Elapsed: 590s
+[2026-09-27 01:47:42]   Chunk 31: 1,550,000 / 1,732,544 (89.5%) | 3,079 entities/s | Elapsed: 610s
+[2026-09-27 01:48:02]   Chunk 32: 1,600,000 / 1,732,544 (92.3%) | 3,096 entities/s | Elapsed: 630s
+[2026-09-27 01:48:22]   Chunk 33: 1,650,000 / 1,732,544 (95.2%) | 3,085 entities/s | Elapsed: 650s
+[2026-09-27 01:48:42]   Chunk 34: 1,700,000 / 1,732,544 (98.1%) | 3,079 entities/s | Elapsed: 670s
+[2026-09-27 01:48:56]   Final Chunk 35: 1,732,544 / 1,732,544 (100.0%) in 683.3s
+[2026-09-27 01:48:56] 
+[Step 4/5] Resolving 1-to-1 Mutual-Best Target Owners...
+[2026-09-27 01:48:59] Resolved 4,271,563 exclusive target winners in 3.8s.
+[2026-09-27 01:48:59] 
+[Step 5/5] Streaming final output TSVs with Calibrated Singleton Protection Gate...
+[2026-09-27 01:49:48] Wrote 1,732,544 records in 48.5s.
+[2026-09-27 01:49:48]   matching_results.tsv: 74.0 MB | 4,270,746 total links | 209,905 singletons (12.12%)
+[2026-09-27 01:49:48]   candidate_pairs.tsv:  2430.2 MB
+[2026-09-27 01:49:48] 
+>>> Production V5 Calibrated Pipeline Finished Successfully in 1088.7s! <<<
+2430.2 MB
+[2026-09-27 01:49:48] 
+>>> Production V5 Calibrated Pipeline Finished Successfully in 1088.7s! <<<

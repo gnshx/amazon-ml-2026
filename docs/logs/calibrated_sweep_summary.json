@@ -1,0 +1,14 @@
+{
+  "best_global_tau": 0.1,
+  "best_global_f05": 0.46484197861652055,
+  "global_sing_acc": 0.12642857142857142,
+  "global_sing_pct": 2.064,
+  "global_m_per_ns": 4.101127266786473,
+  "best_tau_s2": 0.1,
+  "best_tau_s3": 0.1,
+  "best_dual_f05": 0.46484197861652055,
+  "dual_sing_acc": 0.12642857142857142,
+  "dual_sing_pct": 2.064,
+  "dual_m_per_ns": 4.101127266786473,
+  "dual_total_matches": 100412
+}
